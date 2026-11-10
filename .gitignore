@@ -1,0 +1,44 @@
+# Python
+.venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.coverage
+htmlcov/
+*.egg-info/
+
+# Node
+node_modules/
+dist/
+*.local
+
+# Runtime data (patient images, DB, artefacts)
+data/
+*.db
+*.db-wal
+*.db-shm
+
+# Weights and caches
+*.pt
+*.pth
+*.onnx
+.cache/
+
+# Local config and secrets
+.env
+.env.local
+
+# Editors / OS
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+
+# Fixtures are generated, not committed
+backend/tests/fixtures/generated/
+
+# Local probes and screenshots
+.scratch/
+
+# Third-party sample images, kept local for licensing reasons
+sample_data/

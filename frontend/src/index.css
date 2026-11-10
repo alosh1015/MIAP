@@ -1,0 +1,53 @@
+@import "tailwindcss";
+
+@theme {
+  --font-sans: "Inter", "Segoe UI", system-ui, sans-serif;
+  --color-clinical-50: #eef7f3;
+  --color-clinical-100: #d7ede4;
+  --color-clinical-500: #17876a;
+  --color-clinical-600: #126e57;
+  --color-clinical-700: #0f5947;
+  --color-ink-900: #0d1b1e;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+}
+
+body {
+  margin: 0;
+  background: #f4f6f8;
+  color: var(--color-ink-900);
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Cornerstone injects a canvas into the element; keep it inside its pane. */
+.cornerstone-element {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  outline: none;
+}
+
+.cornerstone-element canvas {
+  display: block;
+}
+
+.viewer-grid {
+  display: grid;
+  gap: 1px;
+  background: #1e293b;
+}
+
+@media (min-width: 900px) {
+  .viewer-grid {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+.focus-ring:focus-visible {
+  outline: 2px solid var(--color-clinical-500);
+  outline-offset: 2px;
+}

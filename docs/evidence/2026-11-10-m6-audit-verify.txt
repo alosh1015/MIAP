@@ -1,0 +1,7 @@
+Audit export verification, 2026-11-10, demo run export (87 events).
+
+$ python scripts/verify_audit.py .scratch/shots/demo-audit.ndjson
+OK: 87 events, chain intact (genesis -> c213998d83a7...)
+
+Earlier same day, the verifier was also run against a deliberately tampered
+copy of the export and reported the first mismatching event at seq 3.

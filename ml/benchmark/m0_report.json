@@ -1,0 +1,102 @@
+{
+  "generated_at": "2026-11-09T22:18:39+0300",
+  "host": {
+    "platform": "Windows-11-10.0.26200-SP0",
+    "processor": "Intel64 Family 6 Model 140 Stepping 1, GenuineIntel",
+    "cpu_count": 8,
+    "torch_threads": 4
+  },
+  "versions": {
+    "python": "3.13.1",
+    "torch": "2.15.0+cpu",
+    "torchvision": "0.29.2+cpu",
+    "torchxrayvision": "1.5.7"
+  },
+  "model": {
+    "model_id": "chest_densenet121",
+    "version": "xrv-0.1",
+    "weights": "densenet121-res224-all",
+    "digest": "c8f0ada55b4c059bf07ead3b4702e5f1a80dfa7239f98e6adbe85637e015dfb5",
+    "labels": 18
+  },
+  "images": 12,
+  "timing": {
+    "predict_ms": [
+      148.2,
+      163.2,
+      138.3,
+      145.3,
+      141.6,
+      144.0,
+      135.3,
+      146.2,
+      141.7,
+      151.5,
+      148.9,
+      164.4
+    ],
+    "gradcam_ms": [
+      546.1,
+      509.5,
+      518.5,
+      518.9,
+      531.5,
+      493.7,
+      515.5,
+      513.5,
+      508.1,
+      513.6,
+      535.7,
+      512.7
+    ],
+    "total_ms_mean": 665.5,
+    "total_ms_p95": 689.0
+  },
+  "peak_rss_mb": 852.0,
+  "checks": {
+    "mean_under_6s": {
+      "value": 0.665,
+      "limit": 6.0,
+      "passed": true
+    },
+    "p95_under_8s": {
+      "value": 0.689,
+      "limit": 8.0,
+      "passed": true
+    },
+    "peak_rss_under_4_5gb": {
+      "value": 852.0,
+      "limit": 4500.0,
+      "passed": true
+    },
+    "gradcam_7x7_to_224": {
+      "value": {
+        "grid": [
+          1,
+          1024,
+          7,
+          7
+        ],
+        "cam": [
+          224,
+          224
+        ]
+      },
+      "passed": true
+    },
+    "occlusion_drop_10pct": {
+      "label": "Lung Opacity",
+      "cell": [
+        1,
+        3
+      ],
+      "block_cells": 2,
+      "area_fraction": 0.082,
+      "before": 0.8694,
+      "after": 0.6767,
+      "relative_drop": 0.2216,
+      "passed": true
+    }
+  },
+  "passed": true
+}

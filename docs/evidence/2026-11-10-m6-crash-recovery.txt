@@ -1,0 +1,16 @@
+Crash-recovery check, 2026-11-10, throwaway data directory, port 8022, torch engine.
+
+$ python .scratch/crash_test.py
+Created 3 account(s).
+  clinician      clinician@miap.local       miap-demo-2026
+  researcher     researcher@miap.local      miap-demo-2026
+  administrator  admin@miap.local           miap-demo-2026
+job j_9c902f4a-f71a-4fa4-b556-128882a4fe21
+killed while running
+states ['running', 'completed']
+final completed error None
+PASS: job was requeued after restart and completed
+
+The process was killed with SIGKILL-equivalent while the job state was
+"running" (attempt 1). On restart, JobRunner._recover() requeued the job; it ran
+again and completed. The temporary data directory was deleted afterwards.
