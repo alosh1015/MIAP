@@ -89,7 +89,7 @@ def test_provenance_records_inputs_model_and_seed(client, auth, completed_job):
     assert record["seed"] == 0
     assert record["code_commit"]
     assert record["parameters"]["input_size"] == 224
-    assert record["parameters"]["gradcam_layer"] == "features.norm5"
+    assert record["parameters"]["gradcam_layer"] == "input-gradient"
 
 
 def test_heatmap_artifacts_download(client, auth, completed_job):

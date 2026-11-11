@@ -28,13 +28,18 @@ class Settings(BaseSettings):
     model_device: str = "cpu"
     model_dir: Path = REPO_ROOT / "ml" / "weights"
     registry_path: Path = REPO_ROOT / "ml" / "registry.json"
+    migrations_dir: Path = REPO_ROOT / "migrations"
     cors_origins: str = "http://localhost:5173"
+    pii_key: str = ""
+    pii_index_key: str = ""
+    pii_key_version: int = 1
+    pii_keys: str = "{}"
 
     @model_validator(mode="after")
     def _resolve_relative_paths(self) -> "Settings":
         # Paths in backend/.env are written relative to the backend directory, so
         # resolve them there rather than against whatever directory launched the process.
-        for name in ("data_dir", "database_path", "model_dir", "registry_path"):
+        for name in ("data_dir", "database_path", "model_dir", "registry_path", "migrations_dir"):
             value: Path = getattr(self, name)
             if not value.is_absolute():
                 setattr(self, name, (BACKEND_DIR / value).resolve())

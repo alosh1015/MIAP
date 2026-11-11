@@ -3,8 +3,28 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta name="description" content="MIAP decision support for chest X-ray and mammogram images. Not a diagnostic device." />
+    <meta name="description" content="MIAP decision support for chest X-ray, bone and mammogram images. Not a diagnostic device." />
+    <meta name="theme-color" content="#f5f7f6" />
     <title>MIAP · Medical Image AI Pipeline</title>
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="preload" href="/fonts/schibsted-400.woff2" as="font" type="font/woff2" crossorigin />
+    <link rel="preload" href="/fonts/schibsted-600.woff2" as="font" type="font/woff2" crossorigin />
+    <link rel="preload" href="/fonts/newsreader-600.woff2" as="font" type="font/woff2" crossorigin />
+    <link rel="preload" href="/fonts/jetbrains-400.woff2" as="font" type="font/woff2" crossorigin />
+    <script>
+      // Set the theme before first paint so the shell never flashes light.
+      (function () {
+        try {
+          var pref = localStorage.getItem("miap.theme") || "system";
+          var dark =
+            pref === "dark" ||
+            (pref !== "light" && window.matchMedia("(prefers-color-scheme: dark)").matches);
+          document.documentElement.dataset.theme = dark ? "dark" : "light";
+        } catch (error) {
+          document.documentElement.dataset.theme = "light";
+        }
+      })();
+    </script>
   </head>
   <body>
     <div id="root"></div>

@@ -1,0 +1,15 @@
+{
+  "intended_use": "Candidate breast cancer screening model. Registered for evaluation only; it is not selectable for analysis until an administrator approves it against a local benchmark.",
+  "training_data": "Proprietary vendor training data. MIAP has no access to the training set and does not retrain the model.",
+  "validation": "Not benchmarked locally. Candidate status; no approval decision has been recorded.",
+  "limitations": [
+    "Proprietary weights and licence; redistribution and local deployment require a vendor agreement.",
+    "May require remote code; MIAP refuses remote code unless the model is benchmarked and cached locally.",
+    "Not validated on Ugandan or local patients.",
+    "Cancer screening claims must be evaluated against the local pathway before approval."
+  ],
+  "intended_population": "Not declared for local use.",
+  "input": "Vendor-defined mammography input.",
+  "output": "Vendor-defined screening output.",
+  "ethical_notes": "Visible in the library as a candidate only. No clinical use."
+}

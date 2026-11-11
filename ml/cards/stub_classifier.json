@@ -1,0 +1,14 @@
+{
+  "intended_use": "Demonstration only. Exercises the analysis pipeline without an ML model.",
+  "training_data": "None. Deterministic function of image statistics.",
+  "validation": "Not applicable. Never use for clinical decisions.",
+  "limitations": [
+    "Produces no clinical information.",
+    "Must be labelled demo in every result.",
+    "Exists to test the pipeline offline when no model weights are cached."
+  ],
+  "intended_population": "None.",
+  "input": "Any chest image accepted by the ingestion pipeline.",
+  "output": "A deterministic score and heatmap used only to exercise the UI.",
+  "ethical_notes": "Demo output must never be shown to a patient or used in care."
+}

@@ -1,6 +1,7 @@
-import { useRef, useState, type ChangeEvent, type ReactNode } from "react";
+import { useRef, useState, type ChangeEvent } from "react";
 import { api, ApiError, type DeidReceipt, type Validation } from "../api/client";
-import { Badge, Card } from "./ui";
+import { Icon } from "./icons";
+import { Badge, Button, Field, Input, Notice, Panel, PanelHeader, Select, cx } from "./ui";
 
 interface Outcome {
   filename: string;
@@ -31,16 +32,11 @@ export function UploadPanel({ caseId, onUploaded }: { caseId: string; onUploaded
     const results: Outcome[] = [];
     for (const file of files) {
       try {
-        const response = await api.uploadImage(caseId, file, {
-          modality,
-          body_part: bodyPart,
-          laterality,
-          view,
-        });
+        const response = await api.uploadImage(caseId, file, { modality, body_part: bodyPart, laterality, view });
         results.push({
           filename: file.name,
           ok: true,
-          message: `${response.image.modality ?? "unknown"} · ${response.image.rows ?? "?"}×${response.image.cols ?? "?"}`,
+          message: `${response.image.modality ?? "unknown"} · ${response.image.rows ?? "?"}×${response.image.cols ?? "?"} · stored de-identified`,
           validation: response.validation,
           receipt: response.deid_receipt,
         });
@@ -63,134 +59,130 @@ export function UploadPanel({ caseId, onUploaded }: { caseId: string; onUploaded
   const last = [...outcomes].reverse().find((outcome) => outcome.ok);
 
   return (
-    <Card className="p-5">
-      <h2 className="text-sm font-semibold text-slate-900">Add images</h2>
-      <p className="mt-1 text-xs text-slate-500">
-        DICOM (.dcm) or a plain X-ray image (PNG/JPEG). The file is de-identified before it is written to
-        storage; the original bytes are discarded.
-      </p>
-
-      <div className="mt-4 grid gap-3 md:grid-cols-[1fr_auto]">
-        <label className="block">
-          <span className="text-xs font-medium text-slate-600">Files</span>
+    <Panel>
+      <PanelHeader title="Add images" />
+      <div className="space-y-4 px-4 py-4">
+        <label
+          className={cx(
+            "flex cursor-pointer flex-col items-center justify-center gap-1.5 rounded-md border border-dashed border-rule-strong/40 bg-surface-2 px-4 py-6 text-center transition hover:border-petrol/60",
+            busy && "pointer-events-none opacity-60",
+          )}
+        >
+          <Icon name="upload" size={22} className="text-muted" />
+          <span className="text-sm font-medium text-ink">
+            {files.length > 0 ? `${files.length} file${files.length === 1 ? "" : "s"} selected` : "Choose files"}
+          </span>
+          <span className="text-xs text-muted">.dcm, PNG or JPEG</span>
           <input
             ref={inputRef}
             type="file"
             accept=".dcm,application/dicom,image/png,image/jpeg"
             multiple
             onChange={pick}
-            className="focus-ring mt-1 block w-full rounded-lg border border-dashed border-slate-300 bg-slate-50 px-3 py-3 text-xs text-slate-600 file:mr-3 file:rounded-md file:border-0 file:bg-white file:px-3 file:py-1.5 file:text-xs file:font-medium file:text-slate-700"
+            className="sr-only"
           />
         </label>
-        <button
-          type="button"
-          onClick={upload}
-          disabled={busy || files.length === 0}
-          className="focus-ring self-end rounded-lg bg-clinical-600 px-4 py-2 text-sm font-semibold text-white hover:bg-clinical-700 disabled:opacity-50"
-        >
-          {busy ? "De-identifying…" : files.length > 1 ? `Upload ${files.length} files` : "Upload"}
-        </button>
-      </div>
 
-      <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-        <Field label="Modality override">
-          <select value={modality} onChange={(event) => setModality(event.target.value)} className={selectClass}>
-            <option value="">Read from file</option>
-            <option value="xray">X-ray</option>
-            <option value="mammogram">Mammogram</option>
-          </select>
-        </Field>
-        <Field label="Body part (plain images)">
-          <input
-            value={bodyPart}
-            onChange={(event) => setBodyPart(event.target.value)}
-            placeholder="CHEST"
-            className={inputClass}
-          />
-        </Field>
-        <Field label="Laterality">
-          <select value={laterality} onChange={(event) => setLaterality(event.target.value)} className={selectClass}>
-            <option value="">Not specified</option>
-            <option value="L">Left</option>
-            <option value="R">Right</option>
-          </select>
-        </Field>
-        <Field label="Mammogram view">
-          <select value={view} onChange={(event) => setView(event.target.value)} className={selectClass}>
-            <option value="">Not specified</option>
-            <option value="CC">CC</option>
-            <option value="MLO">MLO</option>
-          </select>
-        </Field>
-      </div>
-
-      {outcomes.length > 0 ? (
-        <div className="mt-4 space-y-2">
-          {outcomes.map((outcome) => (
-            <div
-              key={outcome.filename}
-              className={`rounded-lg border px-3 py-2 text-xs ${
-                outcome.ok ? "border-slate-200 bg-slate-50" : "border-rose-200 bg-rose-50"
-              }`}
-            >
-              <div className="flex flex-wrap items-center justify-between gap-2">
-                <span className="font-medium text-slate-700">{outcome.filename}</span>
-                {outcome.ok ? <Badge tone="good">stored de-identified</Badge> : <Badge tone="bad">rejected</Badge>}
-              </div>
-              <p className="mt-1 text-slate-500">{outcome.message}</p>
-            </div>
-          ))}
+        <div className="grid gap-3 sm:grid-cols-2">
+          <Field label="Modality override" htmlFor="upload-modality">
+            <Select id="upload-modality" value={modality} onChange={(event) => setModality(event.target.value)}>
+              <option value="">Read from the file</option>
+              <option value="xray">X-ray</option>
+              <option value="mammogram">Mammogram</option>
+            </Select>
+          </Field>
+          <Field label="Body part (plain images)" htmlFor="upload-body-part">
+            <Input
+              id="upload-body-part"
+              value={bodyPart}
+              placeholder="e.g. knee, wrist, chest"
+              onChange={(event) => setBodyPart(event.target.value)}
+            />
+          </Field>
+          <Field label="Laterality" htmlFor="upload-laterality">
+            <Select id="upload-laterality" value={laterality} onChange={(event) => setLaterality(event.target.value)}>
+              <option value="">Not specified</option>
+              <option value="L">Left</option>
+              <option value="R">Right</option>
+            </Select>
+          </Field>
+          <Field label="Mammogram view" htmlFor="upload-view">
+            <Select id="upload-view" value={view} onChange={(event) => setView(event.target.value)}>
+              <option value="">Not specified</option>
+              <option value="CC">CC</option>
+              <option value="MLO">MLO</option>
+            </Select>
+          </Field>
         </div>
-      ) : null}
 
-      {last?.validation ? (
-        <div className="mt-4 rounded-lg border border-slate-200 bg-white">
-          <div className="flex items-center justify-between border-b border-slate-100 px-3 py-2">
-            <span className="text-xs font-semibold text-slate-700">Validation</span>
-            <Badge tone={last.validation.status === "warn" ? "warn" : "good"}>{last.validation.status}</Badge>
-          </div>
-          <ul className="divide-y divide-slate-100">
-            {last.validation.checks.map((check) => (
-              <li key={check.code} className="flex items-start gap-3 px-3 py-2 text-xs">
-                <span className="mt-0.5 w-10 shrink-0 uppercase text-slate-400">{check.status}</span>
-                <div>
-                  <p className="font-medium text-slate-700">{check.code.replaceAll("_", " ")}</p>
-                  <p className="text-slate-500">{check.detail}</p>
-                </div>
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <p className="text-xs text-muted">
+            The original bytes are discarded after de-identification; no re-identification key is kept.
+          </p>
+          <Button variant="primary" icon="upload" loading={busy} disabled={files.length === 0} onClick={upload}>
+            {busy ? "De-identifying…" : files.length > 1 ? `Upload ${files.length} files` : "Upload"}
+          </Button>
+        </div>
+
+        {outcomes.length > 0 ? (
+          <ul className="border-t border-rule">
+            {outcomes.map((outcome) => (
+              <li
+                key={outcome.filename}
+                className={cx(
+                  "flex flex-wrap items-center justify-between gap-2 border-b border-rule px-1 py-2 text-sm",
+                  !outcome.ok && "text-danger",
+                )}
+              >
+                <span className="min-w-0 truncate font-medium text-ink">{outcome.filename}</span>
+                <span className={cx("text-xs", outcome.ok ? "text-muted" : "text-danger")}>{outcome.message}</span>
               </li>
             ))}
           </ul>
-          {last.receipt ? (
-            <div className="border-t border-slate-100 px-3 py-2 text-[11px] text-slate-500">
-              De-identification: {last.receipt.removed.length} attributes removed,{" "}
-              {last.receipt.replaced.length} replaced, {last.receipt.uids_remapped} UIDs remapped.{" "}
-              {last.receipt.reidentification_key_retained
-                ? "Re-identification key retained."
-                : "No re-identification key retained."}
-              {last.receipt.warnings.length > 0 ? (
-                <ul className="mt-1 list-disc pl-4 text-amber-700">
-                  {last.receipt.warnings.map((warning) => (
-                    <li key={warning}>{warning}</li>
-                  ))}
-                </ul>
-              ) : null}
+        ) : null}
+
+        {last?.validation ? (
+          <div className="border-t border-rule pt-3">
+            <div className="flex items-center justify-between gap-2 pb-2">
+              <span className="text-sm font-medium text-ink">Validation</span>
+              <Badge tone={last.validation.status === "warn" ? "signal" : "petrol"}>{last.validation.status}</Badge>
             </div>
-          ) : null}
-        </div>
-      ) : null}
-    </Card>
-  );
-}
+            <ul className="divide-y divide-rule border-y border-rule">
+              {last.validation.checks.map((check) => (
+                <li key={check.code} className="flex items-start gap-3 py-2 text-sm">
+                  <span className="mt-0.5 w-10 shrink-0 text-xs text-muted">{check.status}</span>
+                  <div>
+                    <p className="font-medium text-ink">{check.code.replaceAll("_", " ")}</p>
+                    <p className="text-muted">{check.detail}</p>
+                  </div>
+                </li>
+              ))}
+            </ul>
+            {last.receipt ? (
+              <div className="py-2 text-xs text-muted">
+                {last.receipt.removed.length} attributes removed, {last.receipt.replaced.length} replaced,{" "}
+                {last.receipt.uids_remapped} UIDs remapped.{" "}
+                {last.receipt.reidentification_key_retained
+                  ? "Re-identification key retained."
+                  : "No re-identification key retained."}
+                {last.receipt.warnings.length > 0 ? (
+                  <ul className="mt-1 list-disc pl-4 text-signal">
+                    {last.receipt.warnings.map((warning) => (
+                      <li key={warning}>{warning}</li>
+                    ))}
+                  </ul>
+                ) : null}
+              </div>
+            ) : null}
+          </div>
+        ) : null}
 
-const inputClass =
-  "focus-ring mt-1 w-full rounded-lg border border-slate-300 bg-white px-2.5 py-1.5 text-xs text-slate-700";
-const selectClass = inputClass;
-
-function Field({ label, children }: { label: string; children: ReactNode }) {
-  return (
-    <label className="block">
-      <span className="text-[11px] font-medium text-slate-500">{label}</span>
-      {children}
-    </label>
+        {outcomes.some((outcome) => !outcome.ok) ? (
+          <Notice tone="signal" icon="warn">
+            Rejected files were not stored.
+          </Notice>
+        ) : null}
+      </div>
+    </Panel>
   );
 }

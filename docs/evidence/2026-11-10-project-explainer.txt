@@ -1,0 +1,42 @@
+MIAP project explainer and handover PDF — build record
+Date: 2026-11-10
+Output: docs/MIAP-Project-Explainer-2026-11-10.pdf
+
+Purpose
+  A single handover document for group members who did not take part in the
+  build: original requirements, what was delivered, what changed and why,
+  architecture, security and privacy, role workflows, models, reports,
+  verification, limits, runbook, glossary and appendices.
+
+Build path
+  Source HTML (scratch, not shipped):
+    .scratch/report_a.html  cover, contents, sections 1-2
+    .scratch/report_b.html  sections 3-6
+    .scratch/report_c.html  sections 7-10
+    .scratch/report_d.html  sections 11-14 and appendices A-C
+  Concatenated to .scratch/report.html and rendered with Microsoft Edge
+  (Playwright, A4, print backgrounds, local woff2 fonts and local PNGs).
+  A draft pass reads back the first line of each section page to fill the
+  contents page numbers. A final pass renders the numbered contents. Page
+  footers, PDF metadata and bookmarks are added with PyMuPDF.
+
+Checks run on the final file
+  page count                 45
+  embedded screenshots       7 (docs/evidence/report-*.png, 1440 px at 1.5 DPR)
+  contents links             17, destinations match the 17 bookmarks
+  fonts                      subset Schibsted Grotesk, Newsreader, JetBrains Mono
+  text extraction            84,788 characters, no placeholder strings
+  empty pages                none; cover has no footer, pages 2-45 numbered
+  sparse pages               chapter tails only (16, 29, 33, 45), no orphaned captions
+  size                      2.3 MB (2,412,502 bytes)
+  sha256                     e48ee1cd17e30452803b86f1c74546d352e0bcfa7b379a1dedfcaa031ab7795f
+  backend suite              271 passed in 36.76 s (re-run for this document)
+  repository facts           19 backend modules; 16 runtime tables plus
+                             schema_migrations; 3 approved models, 1 candidate,
+                             1 hidden internal router
+  benchmark figures          checked against ml/benchmark/*.json
+
+Not claimed
+  No external review. Not a clinical or regulatory submission. Numbers and
+  screenshots describe the 10 November 2026 build. The document contains no
+  patient data, keys, passwords or environment values.

@@ -33,6 +33,7 @@ class HeatmapRef(BaseModel):
     path: str
     overlay_png: str | None = None
     shape: list[int] | None = None
+    mapping: str = "centre"
 
 
 class Birads(BaseModel):
@@ -50,6 +51,7 @@ class ResultDocument(BaseModel):
     model: ModelRef
     classification: dict[str, str | float]
     findings: list[Finding] = Field(default_factory=list)
+    primary_finding_index: int | None = None
     detections: list[Detection] = Field(default_factory=list)
     segmentation: dict | None = None
     heatmap: HeatmapRef | None = None

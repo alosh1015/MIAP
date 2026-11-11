@@ -6,7 +6,11 @@ from types import SimpleNamespace
 import numpy as np
 from PIL import Image as PILImage
 
-from app.modules.reporting.service import _display_gray, _overlay_preview
+from app.modules.reporting.templates.common import (
+    _display_gray,
+    _draw_annotations,
+    overlay_preview as _overlay_preview,
+)
 
 
 def _png_bytes(image: PILImage.Image) -> bytes:
@@ -42,6 +46,18 @@ def test_overlay_is_composited_onto_the_original_image(tmp_path):
     corner = preview.getpixel((10, 150))
     assert corner[0] == corner[1] == corner[2]
     assert abs(int(corner[0]) - int(ramp[150, 10])) <= 2
+
+
+def test_reviewer_highlights_are_painted_inside_the_preview():
+    preview = PILImage.new("RGB", (100, 100), (0, 0, 0))
+    polygon = [(0.25, 0.25), (0.75, 0.25), (0.75, 0.75), (0.25, 0.75)]
+
+    assert _draw_annotations(preview, [polygon]) is True
+    inside = preview.getpixel((50, 50))
+    assert inside[0] > inside[2]
+    assert preview.getpixel((5, 5)) == (0, 0, 0)
+
+    assert _draw_annotations(preview, []) is False
 
 
 def test_display_gray_applies_window_and_monochrome1():

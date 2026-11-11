@@ -1,0 +1,16 @@
+{
+  "schema_version": 1,
+  "generated_at": "2026-11-10T10:25:09+00:00",
+  "model": {
+    "id": "mammoscreen",
+    "version": "vendor",
+    "digest": "pending",
+    "preprocess_profile": "mammoscreen_vendor"
+  },
+  "fixture": null,
+  "status": "refused",
+  "selectable": false,
+  "reason": "model_not_approved: Commercial weights, remote code and no local benchmark; not selectable.",
+  "passed": false,
+  "benchmark_digest": null
+}

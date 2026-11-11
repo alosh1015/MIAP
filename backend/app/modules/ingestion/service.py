@@ -236,7 +236,7 @@ def ingest_upload(
         "checks": checks,
         "modality": modality,
         "region_or_view": region,
-        "capability": capability_for(str(region["value"])),
+        "capability": capability_for(str(region["value"]), modality["value"]),
         "warnings": warnings,
     }
     image.validation_json = json.dumps(validation, sort_keys=True)

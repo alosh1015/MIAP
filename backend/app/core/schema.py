@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from sqlalchemy import ForeignKey, Index, Integer, REAL, String, Text, UniqueConstraint
+from sqlalchemy import ForeignKey, Index, Integer, LargeBinary, REAL, String, Text, UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.core.db import Base
@@ -18,6 +18,23 @@ class User(Base):
     created_at: Mapped[str] = mapped_column(String(32), nullable=False)
 
 
+class Patient(Base):
+    __tablename__ = "patients"
+
+    id: Mapped[str] = mapped_column(String(64), primary_key=True)
+    owner_id: Mapped[str] = mapped_column(String(64), ForeignKey("users.id"), nullable=False)
+    identity_ciphertext: Mapped[bytes] = mapped_column(LargeBinary, nullable=False)
+    identity_nonce: Mapped[bytes] = mapped_column(LargeBinary, nullable=False)
+    key_version: Mapped[int] = mapped_column(Integer, nullable=False)
+    hospital_index: Mapped[str] = mapped_column(String(64), nullable=False)
+    created_at: Mapped[str] = mapped_column(String(32), nullable=False)
+    updated_at: Mapped[str] = mapped_column(String(32), nullable=False)
+
+
+Index("ix_patients_owner", Patient.owner_id, Patient.created_at)
+Index("uq_patients_owner_hospital", Patient.owner_id, Patient.hospital_index, unique=True)
+
+
 class Case(Base):
     __tablename__ = "cases"
 
@@ -25,10 +42,14 @@ class Case(Base):
     pseudonym: Mapped[str] = mapped_column(String(120), nullable=False)
     consent: Mapped[str] = mapped_column(String(20), nullable=False)
     created_by: Mapped[str] = mapped_column(String(64), ForeignKey("users.id"), nullable=False)
+    patient_id: Mapped[str | None] = mapped_column(String(64), ForeignKey("patients.id"))
     status: Mapped[str] = mapped_column(String(20), nullable=False, default="created")
     modality: Mapped[str | None] = mapped_column(String(20))
     retention_until: Mapped[str | None] = mapped_column(String(32))
     created_at: Mapped[str] = mapped_column(String(32), nullable=False)
+
+
+Index("ix_cases_patient", Case.patient_id)
 
 
 class Image(Base):
@@ -64,6 +85,7 @@ class Job(Base):
     state: Mapped[str] = mapped_column(String(20), nullable=False, default="created")
     progress: Mapped[float] = mapped_column(REAL, nullable=False, default=0.0)
     idempotency_key: Mapped[str | None] = mapped_column(String(128), unique=True)
+    batch_id: Mapped[str | None] = mapped_column(String(64), ForeignKey("analysis_batches.id"))
     model_id: Mapped[str | None] = mapped_column(String(80))
     model_version: Mapped[str | None] = mapped_column(String(40))
     params_json: Mapped[str] = mapped_column(Text, nullable=False, default="{}")
@@ -76,6 +98,7 @@ class Job(Base):
 
 
 Index("ix_jobs_state", Job.state)
+Index("ix_jobs_batch", Job.batch_id)
 
 
 class Result(Base):
@@ -103,6 +126,77 @@ class Provenance(Base):
     created_at: Mapped[str] = mapped_column(String(32), nullable=False)
 
 
+class ResultHeatmap(Base):
+    __tablename__ = "result_heatmaps"
+
+    id: Mapped[str] = mapped_column(String(64), primary_key=True)
+    result_id: Mapped[str] = mapped_column(String(64), ForeignKey("results.id"), nullable=False)
+    finding_index: Mapped[int] = mapped_column(Integer, nullable=False)
+    label: Mapped[str] = mapped_column(String(160), nullable=False)
+    npy_path: Mapped[str] = mapped_column(Text, nullable=False)
+    png_path: Mapped[str] = mapped_column(Text, nullable=False)
+    shape_json: Mapped[str] = mapped_column(Text, nullable=False, default="[]")
+    created_at: Mapped[str] = mapped_column(String(32), nullable=False)
+
+
+Index("uq_heatmaps_result_finding", ResultHeatmap.result_id, ResultHeatmap.finding_index, unique=True)
+
+
+class ImageAnnotation(Base):
+    __tablename__ = "image_annotations"
+
+    id: Mapped[str] = mapped_column(String(64), primary_key=True)
+    case_id: Mapped[str] = mapped_column(String(64), ForeignKey("cases.id"), nullable=False)
+    image_id: Mapped[str] = mapped_column(String(64), ForeignKey("images.id"), nullable=False)
+    created_by: Mapped[str] = mapped_column(String(64), ForeignKey("users.id"), nullable=False)
+    points_json: Mapped[str] = mapped_column(Text, nullable=False)
+    created_at: Mapped[str] = mapped_column(String(32), nullable=False)
+
+
+Index("ix_annotations_image", ImageAnnotation.image_id, ImageAnnotation.created_at)
+
+
+class FindingReview(Base):
+    __tablename__ = "finding_reviews"
+
+    id: Mapped[str] = mapped_column(String(64), primary_key=True)
+    result_id: Mapped[str] = mapped_column(String(64), ForeignKey("results.id"), nullable=False)
+    case_id: Mapped[str] = mapped_column(String(64), ForeignKey("cases.id"), nullable=False)
+    finding_index: Mapped[int] = mapped_column(Integer, nullable=False)
+    decision: Mapped[str] = mapped_column(String(20), nullable=False)
+    note_ciphertext: Mapped[bytes | None] = mapped_column(LargeBinary)
+    note_nonce: Mapped[bytes | None] = mapped_column(LargeBinary)
+    note_key_version: Mapped[int | None] = mapped_column(Integer)
+    has_note: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    reviewer_id: Mapped[str] = mapped_column(String(64), ForeignKey("users.id"), nullable=False)
+    revision: Mapped[int] = mapped_column(Integer, nullable=False, default=1)
+    created_at: Mapped[str] = mapped_column(String(32), nullable=False)
+    updated_at: Mapped[str] = mapped_column(String(32), nullable=False)
+
+
+Index("uq_reviews_result_finding", FindingReview.result_id, FindingReview.finding_index, unique=True)
+Index("ix_reviews_case", FindingReview.case_id)
+
+
+class AnalysisBatch(Base):
+    __tablename__ = "analysis_batches"
+
+    id: Mapped[str] = mapped_column(String(64), primary_key=True)
+    case_id: Mapped[str] = mapped_column(String(64), ForeignKey("cases.id"), nullable=False)
+    requested_by: Mapped[str] = mapped_column(String(64), ForeignKey("users.id"), nullable=False)
+    model_id: Mapped[str] = mapped_column(String(80), nullable=False)
+    model_version: Mapped[str | None] = mapped_column(String(40))
+    state: Mapped[str] = mapped_column(String(20), nullable=False, default="queued")
+    total: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    completed: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    failed: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    created_at: Mapped[str] = mapped_column(String(32), nullable=False)
+    updated_at: Mapped[str] = mapped_column(String(32), nullable=False)
+
+
+Index("ix_batches_case", AnalysisBatch.case_id)
+
+
 class AuditEvent(Base):
     __tablename__ = "audit_events"
 
@@ -128,13 +222,58 @@ class ModelVersion(Base):
     task: Mapped[str] = mapped_column(String(40), nullable=False)
     modalities_json: Mapped[str] = mapped_column(Text, nullable=False, default="[]")
     card_json: Mapped[str] = mapped_column(Text, nullable=False, default="{}")
+    approved_by: Mapped[str | None] = mapped_column(String(64), ForeignKey("users.id"))
+    approved_at: Mapped[str | None] = mapped_column(String(32))
+    state_source: Mapped[str] = mapped_column(String(20), nullable=False, default="registry")
+
+
+class ModelApproval(Base):
+    __tablename__ = "model_approvals"
+
+    id: Mapped[str] = mapped_column(String(64), primary_key=True)
+    model_id: Mapped[str] = mapped_column(String(80), nullable=False)
+    version: Mapped[str] = mapped_column(String(40), nullable=False)
+    decision: Mapped[str] = mapped_column(String(20), nullable=False)
+    decided_by: Mapped[str] = mapped_column(String(64), ForeignKey("users.id"), nullable=False)
+    decided_at: Mapped[str] = mapped_column(String(32), nullable=False)
+    note: Mapped[str | None] = mapped_column(Text)
+    benchmark_digest: Mapped[str | None] = mapped_column(String(64))
+
+
+Index("ix_approvals_model", ModelApproval.model_id, ModelApproval.version, ModelApproval.decided_at)
 
 
 class Report(Base):
     __tablename__ = "reports"
 
     id: Mapped[str] = mapped_column(String(64), primary_key=True)
-    case_id: Mapped[str] = mapped_column(String(64), ForeignKey("cases.id"), nullable=False)
+    case_id: Mapped[str | None] = mapped_column(String(64), ForeignKey("cases.id"))
     path: Mapped[str] = mapped_column(Text, nullable=False)
     created_by: Mapped[str] = mapped_column(String(64), ForeignKey("users.id"), nullable=False)
+    audience: Mapped[str] = mapped_column(String(20), nullable=False, default="legacy")
+    kind: Mapped[str] = mapped_column(String(20), nullable=False, default="case")
+    result_id: Mapped[str | None] = mapped_column(String(64))
+    sha256: Mapped[str | None] = mapped_column(String(64))
+    template_version: Mapped[str | None] = mapped_column(String(20))
+    title: Mapped[str | None] = mapped_column(String(200))
     created_at: Mapped[str] = mapped_column(String(32), nullable=False)
+
+
+Index("ix_reports_audience", Report.audience)
+
+
+class AppSetting(Base):
+    __tablename__ = "app_settings"
+
+    key: Mapped[str] = mapped_column(String(80), primary_key=True)
+    value_json: Mapped[str] = mapped_column(Text, nullable=False)
+    updated_by: Mapped[str | None] = mapped_column(String(64))
+    updated_at: Mapped[str] = mapped_column(String(32), nullable=False)
+
+
+class UserPref(Base):
+    __tablename__ = "user_prefs"
+
+    user_id: Mapped[str] = mapped_column(String(64), ForeignKey("users.id"), primary_key=True)
+    prefs_json: Mapped[str] = mapped_column(Text, nullable=False, default="{}")
+    updated_at: Mapped[str] = mapped_column(String(32), nullable=False)

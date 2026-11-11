@@ -45,8 +45,10 @@ def _configure_engine(db_path: Path) -> Engine:
 
 def init_db(db_path: Path | None = None) -> Engine:
     from app.core import schema  # noqa: F401  (register models on Base.metadata)
+    from app.core.migrations import apply_migrations
 
     target = db_path or settings.database_path
+    apply_migrations(target)
     configured = _configure_engine(target)
     Base.metadata.create_all(configured)
     return configured

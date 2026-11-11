@@ -1,0 +1,100 @@
+{
+  "schema_version": 1,
+  "generated_at": "2026-11-10T10:24:23+00:00",
+  "host": {
+    "platform": "Windows-11-10.0.26200-SP0",
+    "processor": "Intel64 Family 6 Model 140 Stepping 1, GenuineIntel",
+    "python": "3.13.1",
+    "runs": 5,
+    "warmup": 1
+  },
+  "model": {
+    "id": "monai_density",
+    "version": "0.1",
+    "digest": "710a49172243ea9972bec5dc717382c294ed77310596b6ad0df9bb83f7ceafce",
+    "preprocess_profile": "monai_density_299"
+  },
+  "fixture": {
+    "path": "backend/tests/fixtures/generated/mammo_four_view/LCC.dcm",
+    "sha256": "9d81e54c8bfcd029d91434d30b14beca22ff36fdc6b384b4658e25af7c972645",
+    "rows": 640,
+    "cols": 480
+  },
+  "input": {
+    "shape": [
+      1,
+      3,
+      299,
+      299
+    ],
+    "min": 0.0,
+    "max": 1.0,
+    "mean": 0.4996,
+    "std": 0.2358
+  },
+  "prediction": {
+    "label": "B",
+    "probability": 0.7791,
+    "findings": [
+      {
+        "label": "B",
+        "probability": 0.7791,
+        "threshold": 0.5
+      },
+      {
+        "label": "C",
+        "probability": 0.6623,
+        "threshold": 0.5
+      },
+      {
+        "label": "A",
+        "probability": 0.0553,
+        "threshold": 0.5
+      },
+      {
+        "label": "D",
+        "probability": 0.0379,
+        "threshold": 0.5
+      }
+    ]
+  },
+  "load_seconds": 4.265,
+  "latency": {
+    "mean": 0.109,
+    "p50": 0.11,
+    "p95": 0.112,
+    "min": 0.104,
+    "max": 0.112,
+    "first_result": 2.652
+  },
+  "cam": {
+    "seconds": 2.543,
+    "shape": [
+      299,
+      299
+    ],
+    "min": 0.0,
+    "max": 1.0,
+    "mean": 0.0375,
+    "std": 0.1533,
+    "checksum": "f0705f428c68c7680090937678c89d4457b4d76277d5139870ed4290d41f1a5e"
+  },
+  "memory": {
+    "peak_rss_mb": 465.4
+  },
+  "checks": {
+    "digest_verified": true,
+    "latency_gate": true,
+    "result_gate": true,
+    "cam_matches_input": true,
+    "cam_finite": true,
+    "cam_range": true,
+    "cam_has_signal": true
+  },
+  "gates": {
+    "max_mean_seconds": 6.0,
+    "max_result_seconds": 6.0
+  },
+  "passed": true,
+  "benchmark_digest": "cffedc26ba4fd8634c963e9bbddaf979a43833ae435894f4f2c7eb86963e09a5"
+}

@@ -1,0 +1,16 @@
+{
+  "intended_use": "Decision support for research and teaching: breast density category from a single mammogram view. Density is not a cancer diagnosis and this model does not detect cancer.",
+  "training_data": "MONAI Model Zoo breast density classification model. The training data and labels are documented by the upstream project; MIAP does not retrain or extend them.",
+  "validation": "No clinical validation on Ugandan or local patients. The local CPU gate (2026-11-10) passed: mean 0.109 s per view, 2.65 s first result including a 299x299 Grad-CAM, 465 MB peak RSS, recorded in ml/benchmark/monai_density_benchmark.json. That gate tests speed and CAM sanity, not accuracy.",
+  "limitations": [
+    "Breast density is not the same as cancer risk; clinical judgement and local guidelines decide follow-up.",
+    "The model runs per view; the exam summary reports the highest density per breast with a caveat.",
+    "Not validated on implants, prior breast surgery, males or poorly positioned views.",
+    "Scores are uncalibrated and the heatmap shows where the model looked, not proof of disease.",
+    "Women with dense breasts can still have cancer that this model does not detect."
+  ],
+  "intended_population": "Adults undergoing screening or diagnostic mammography in the four standard views (CC/MLO, left/right).",
+  "input": "One mammogram view resized to 299x299 (not centre-cropped, to keep the breast), three channels, [0,1] range.",
+  "output": "Density category probabilities and a Grad-CAM from Mixed_7c.",
+  "ethical_notes": "Do not use as a stand-alone triage tool. Discuss density results in the local breast pathway."
+}

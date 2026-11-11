@@ -22,6 +22,8 @@ data/
 *.pt
 *.pth
 *.onnx
+*.safetensors
+ml/weights/
 .cache/
 
 # Local config and secrets

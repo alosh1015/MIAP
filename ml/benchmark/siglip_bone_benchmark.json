@@ -1,0 +1,87 @@
+{
+  "schema_version": 1,
+  "generated_at": "2026-11-10T10:24:47+00:00",
+  "host": {
+    "platform": "Windows-11-10.0.26200-SP0",
+    "processor": "Intel64 Family 6 Model 140 Stepping 1, GenuineIntel",
+    "python": "3.13.1",
+    "runs": 3,
+    "warmup": 1
+  },
+  "model": {
+    "id": "siglip_bone",
+    "version": "0.1",
+    "digest": "612923381c76ec5a9bed335d1c48827e3f2e506ac31b044b63b2031fadee6a0b",
+    "preprocess_profile": "siglip_bone_224"
+  },
+  "fixture": {
+    "path": "backend/tests/fixtures/generated/hand_pa.dcm",
+    "sha256": "ce571a8a8b418ef3c67d78d37da02a3d808590a26b21069d93e891e2d280954e",
+    "rows": 512,
+    "cols": 512
+  },
+  "input": {
+    "shape": [
+      1,
+      3,
+      224,
+      224
+    ],
+    "min": -1.0,
+    "max": 1.0,
+    "mean": -0.0,
+    "std": 0.4723
+  },
+  "prediction": {
+    "label": "normal",
+    "probability": 0.6383,
+    "findings": [
+      {
+        "label": "normal",
+        "probability": 0.6383,
+        "threshold": 0.5
+      },
+      {
+        "label": "abnormal",
+        "probability": 0.3617,
+        "threshold": 0.5
+      }
+    ]
+  },
+  "load_seconds": 11.894,
+  "latency": {
+    "mean": 0.331,
+    "p50": 0.327,
+    "p95": 0.337,
+    "min": 0.327,
+    "max": 0.338,
+    "first_result": 3.429
+  },
+  "cam": {
+    "seconds": 3.098,
+    "shape": [
+      224,
+      224
+    ],
+    "min": 0.0,
+    "max": 1.0,
+    "mean": 0.2771,
+    "std": 0.2105,
+    "checksum": "4c2083d91b1b85bed91866674f028cdbff00a0262ceb88b9c88d541bd9722ee2"
+  },
+  "memory": {
+    "peak_rss_mb": 2081.6
+  },
+  "checks": {
+    "digest_verified": true,
+    "latency_gate": true,
+    "result_gate": true,
+    "cam_matches_input": true,
+    "cam_finite": true,
+    "cam_range": true,
+    "cam_has_signal": true
+  },
+  "gates": {},
+  "passed": true,
+  "benchmark_digest": "390bcb5c003fb9ecd5cfac78c5b85b7508d1cef89d6e323f116e12762e04196b"
+}

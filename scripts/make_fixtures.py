@@ -111,6 +111,8 @@ def main() -> None:
     make_dicom(out / "chest_mono1.dcm", seed=2, photometric="MONOCHROME1")
     make_dicom(out / "skull_ap.dcm", seed=3, body_part="SKULL")
     make_dicom(out / "chest_small.dcm", seed=4, rows=96, cols=96)
+    make_dicom(out / "hand_pa.dcm", seed=5, body_part="HAND", laterality="L", view="PA")
+    make_dicom(out / "hip_ap.dcm", seed=6, body_part="HIP", laterality="R", view="AP")
 
     mammo = out / "mammo_four_view"
     for index, (laterality, view) in enumerate(

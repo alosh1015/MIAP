@@ -63,8 +63,8 @@ def test_report_pdf_carries_model_limitations_and_disclaimer(client, auth, repor
     text = "\n".join(page.extract_text() or "" for page in PdfReader(io.BytesIO(response.content)).pages)
     assert "not a diagnosis" in text
     assert "stub_classifier" in text
-    assert "Model limitations" in text
-    assert "Provenance" in text
+    assert "Caveats" in text
+    assert "Appendix" in text
 
 
 def test_report_requires_a_completed_analysis(client, auth, new_case):

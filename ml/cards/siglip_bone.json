@@ -1,0 +1,16 @@
+{
+  "intended_use": "Decision support for limb X-ray review: zero-shot prompts for fracture and other abnormality. Hip and pelvis are experimental and must be labelled degraded.",
+  "training_data": "SigLIP 2 image-text pretraining on public web data. Not fine-tuned on bone radiographs; MIAP uses text prompts to score findings, so thresholds are not clinically calibrated.",
+  "validation": "No clinical validation on Ugandan or local patients and no threshold tuning. The local CPU gate (2026-11-10) passed on a hand fixture: mean 0.331 s, 3.43 s first result including a 224x224 Grad-CAM, 2.1 GB peak RSS, recorded in ml/benchmark/siglip_bone_benchmark.json. Speed and CAM sanity only, not accuracy.",
+  "limitations": [
+    "Zero-shot scores are uncalibrated and may change with prompt wording.",
+    "Hip and pelvis are experimental; results are marked degraded with an extra caveat.",
+    "Paediatric, post-surgical and hardware images are out of scope.",
+    "The heatmap shows where the model looked, not proof of a fracture.",
+    "A negative result does not exclude a fracture; review the full series."
+  ],
+  "intended_population": "Adults with a limb radiograph; not validated for children or complex trauma.",
+  "input": "Single radiograph, centre crop resized to 224x224, grey replicated to three channels, mean/std 0.5.",
+  "output": "Zero-shot prompt scores with a Grad-CAM from the last encoder block, reshaped from tokens.",
+  "ethical_notes": "Experimental on hip and pelvis. Always state the limitation in the report."
+}

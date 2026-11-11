@@ -1,0 +1,16 @@
+{
+  "intended_use": "Decision support for research and teaching: multi-finding probabilities on chest radiographs (PA/AP). Not a diagnosis and not a tuberculosis screen.",
+  "training_data": "TorchXRayVision DenseNet-121 'all' weights, trained on a union of public chest radiograph datasets. The exact union and labels are defined by the upstream project.",
+  "validation": "No validation on Ugandan or local patients. Upstream public-dataset performance only; no local benchmark has been run (ml/benchmark has no chest benchmark yet).",
+  "limitations": [
+    "Trained on non-African populations; performance may not transfer.",
+    "Labels are dataset annotations, not confirmed diagnoses.",
+    "Portable or scanned films and unusual windowing may degrade results.",
+    "The heatmap shows where the model looked, not proof of a finding.",
+    "MIAP does not screen for tuberculosis; a low score does not exclude TB."
+  ],
+  "intended_population": "Adults and children with a chest radiograph; not validated for any specific population.",
+  "input": "Single frontal chest radiograph, centre crop resized to 224x224, TorchXRayVision normalisation.",
+  "output": "Per-finding probability scores with an uncalibrated threshold of 0.5 and a Grad-CAM.",
+  "ethical_notes": "Decision support only. Clinician review is required before any action."
+}

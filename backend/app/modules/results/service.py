@@ -13,7 +13,7 @@ from app.core.audit import append_audit
 from app.core.config import get_settings
 from app.core.errors import AppError
 from app.core.ids import new_id, utcnow_iso
-from app.core.schema import Image, Job, Provenance, Result
+from app.core.schema import Image, Job, Provenance, Result, ResultHeatmap
 from app.core.storage import relative
 from app.modules.results.schemas import ResultDocument
 
@@ -24,15 +24,15 @@ def _derived_dir(case_id: str, image_id: str) -> Path:
     return directory
 
 
-def save_heatmap(cam: np.ndarray, case_id: str, image_id: str) -> dict:
+def save_heatmap(cam: np.ndarray, case_id: str, image_id: str, *, suffix: str = "") -> dict:
     from PIL import Image as PILImage
 
     directory = _derived_dir(case_id, image_id)
     cam = np.asarray(cam, dtype=np.float32)
     cam = np.clip(cam, 0.0, 1.0)
 
-    npy_path = directory / "heatmap.npy"
-    npy_temp = directory / ".heatmap.npy.tmp"
+    npy_path = directory / f"heatmap{suffix}.npy"
+    npy_temp = directory / f".heatmap{suffix}.npy.tmp"
     with npy_temp.open("wb") as handle:
         np.save(handle, cam)
     os.replace(npy_temp, npy_path)
@@ -41,8 +41,8 @@ def save_heatmap(cam: np.ndarray, case_id: str, image_id: str) -> dict:
     rgba[..., 0] = 255
     rgba[..., 1] = (255 * (1.0 - cam)).astype(np.uint8)
     rgba[..., 3] = (200 * cam).astype(np.uint8)
-    png_path = directory / "heatmap.png"
-    png_temp = directory / ".heatmap.png.tmp"
+    png_path = directory / f"heatmap{suffix}.png"
+    png_temp = directory / f".heatmap{suffix}.png.tmp"
     PILImage.fromarray(rgba, mode="RGBA").save(png_temp, format="PNG")
     os.replace(png_temp, png_path)
 
@@ -61,10 +61,22 @@ def create_result(
     image: Image,
     document: ResultDocument,
     cam: np.ndarray | None,
+    primary_index: int = 0,
+    parameters: dict | None = None,
+    heatmap_mapping: str = "centre",
 ) -> Result:
-    heatmap = save_heatmap(cam, job.case_id, image.id) if cam is not None else None
+    result_id = new_id("result")
+    # Results for the same image must not overwrite each other's maps.
+    heatmap = (
+        save_heatmap(cam, job.case_id, image.id, suffix=f"_{result_id}")
+        if cam is not None
+        else None
+    )
+    if heatmap is not None:
+        heatmap["mapping"] = heatmap_mapping
     document_payload = document.model_dump()
     document_payload["heatmap"] = heatmap
+    document_payload["primary_finding_index"] = primary_index
 
     provenance_id = new_id("provenance")
     document_payload["provenance_id"] = provenance_id
@@ -75,11 +87,12 @@ def create_result(
         job=job,
         image=image,
         document=document_payload,
+        parameters=parameters,
     )
     created_at = utcnow_iso()
 
     result = Result(
-        id=new_id("result"),
+        id=result_id,
         job_id=job.id,
         image_id=image.id,
         case_id=job.case_id,
@@ -91,6 +104,23 @@ def create_result(
     )
     session.add(result)
     session.flush()
+
+    if heatmap is not None:
+        label = ""
+        if 0 <= primary_index < len(document_payload.get("findings", [])):
+            label = str(document_payload["findings"][primary_index].get("label", ""))
+        session.add(
+            ResultHeatmap(
+                id=new_id("heatmap"),
+                result_id=result.id,
+                finding_index=primary_index,
+                label=label,
+                npy_path=heatmap["path"],
+                png_path=heatmap["overlay_png"],
+                shape_json=json.dumps(heatmap["shape"]),
+                created_at=created_at,
+            )
+        )
 
     record["result_id"] = result.id
     session.add(
@@ -120,6 +150,7 @@ def build_provenance(
     job: Job,
     image: Image,
     document: dict,
+    parameters: dict | None = None,
 ) -> dict:
     import platform
     import subprocess
@@ -139,6 +170,14 @@ def build_provenance(
         code_commit = "uncommitted"
 
     heatmap = document.get("heatmap") or {}
+    runtime_parameters = parameters or {
+        "input_size": 224,
+        "normalisation": "torchxrayvision.datasets.normalize(img, 255)",
+        "threshold": 0.5,
+        "gradcam_layer": "features.norm5",
+    }
+    runtime_parameters = dict(runtime_parameters)
+    runtime_parameters["heatmap_shape"] = heatmap.get("shape")
     return {
         "record_id": provenance_id,
         "result_id": result_id,
@@ -153,13 +192,7 @@ def build_provenance(
             "platform": platform.platform(),
             "backend": "torch-cpu" if document.get("model", {}).get("demo") is False else "stub",
         },
-        "parameters": {
-            "input_size": 224,
-            "normalisation": "torchxrayvision.datasets.normalize(img, 255)",
-            "threshold": 0.5,
-            "gradcam_layer": "features.norm5",
-            "heatmap_shape": heatmap.get("shape"),
-        },
+        "parameters": runtime_parameters,
         "code_commit": code_commit,
         "seed": 0,
         "operator": job.requested_by,

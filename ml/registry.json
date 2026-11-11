@@ -9,17 +9,37 @@
       "task": "multi_finding_classification",
       "modalities": ["xray"],
       "regions": ["chest"],
+      "capabilities": ["chest"],
+      "degraded_capabilities": [],
       "demo": false,
-      "card": {
-        "intended_use": "Decision support for research and teaching: multi-finding probabilities on chest radiographs (PA/AP). Not a diagnosis.",
-        "training_data": "TorchXRayVision DenseNet-121 'all' weights, trained on a union of public chest radiograph datasets. The exact union and labels are defined by the upstream project.",
-        "validation": "No validation on Ugandan or local patients. Upstream public-dataset performance only; no local benchmark has been run.",
-        "limitations": [
-          "Trained on non-African populations; performance may not transfer.",
-          "Labels are dataset annotations, not confirmed diagnoses.",
-          "Portable or scanned films and unusual windowing may degrade results.",
-          "The heatmap shows where the model looked, not proof of a finding."
-        ]
+      "validated_locally": false,
+      "preprocess_profile": "xrv_chest_224",
+      "input": {
+        "size": [224, 224],
+        "channels": 1,
+        "crop": "centre",
+        "mean": "torchxrayvision.datasets.normalize",
+        "std": "torchxrayvision.datasets.normalize"
+      },
+      "cam": {
+        "method": "gradcam",
+        "target_layer": "features.norm5",
+        "reshape": null
+      },
+      "licence": {
+        "spdx": "Apache-2.0",
+        "name": "TorchXRayVision",
+        "url": "https://github.com/mlmed/torchxrayvision",
+        "access_date": "2026-11-10"
+      },
+      "source": {
+        "repo": "https://github.com/mlmed/torchxrayvision",
+        "weights_url": "https://github.com/mlmed/torchxrayvision/releases",
+        "sha256": "c8f0ada55b4c059bf07ead3b4702e5f1a80dfa7239f98e6adbe85637e015dfb5"
+      },
+      "metrics": [],
+      "approval": {
+        "benchmark_path": null
       }
     },
     {
@@ -28,15 +48,206 @@
       "weights": "internal:deterministic-stub",
       "digest": "stub-not-a-model",
       "state": "approved",
+      "presentation": "internal",
       "task": "classification",
       "modalities": ["xray"],
       "regions": ["chest"],
+      "capabilities": ["chest"],
+      "degraded_capabilities": [],
       "demo": true,
-      "card": {
-        "intended_use": "Demonstration only. Exercises the pipeline without an ML model.",
-        "training_data": "None. Deterministic function of image statistics.",
-        "validation": "Not applicable.",
-        "limitations": ["Produces no clinical information.", "Must be labelled demo in every result."]
+      "validated_locally": false,
+      "preprocess_profile": "xrv_chest_224",
+      "input": {
+        "size": [224, 224],
+        "channels": 1,
+        "crop": "centre",
+        "mean": null,
+        "std": null
+      },
+      "cam": {
+        "method": "deterministic",
+        "target_layer": null,
+        "reshape": null
+      },
+      "licence": {
+        "spdx": "LicenseRef-Internal",
+        "name": "MIAP internal test fixture",
+        "url": null,
+        "access_date": "2026-11-10"
+      },
+      "source": {
+        "repo": null,
+        "weights_url": null,
+        "sha256": null
+      },
+      "metrics": [],
+      "approval": {
+        "benchmark_path": null
+      }
+    },
+    {
+      "model_id": "monai_density",
+      "version": "0.1",
+      "weights": "monai:breast_density_classification",
+      "digest": "710a49172243ea9972bec5dc717382c294ed77310596b6ad0df9bb83f7ceafce",
+      "state": "candidate",
+      "task": "breast_density_classification",
+      "modalities": ["mammogram"],
+      "regions": ["breast"],
+      "capabilities": ["mammogram_density"],
+      "degraded_capabilities": [],
+      "demo": false,
+      "validated_locally": false,
+      "preprocess_profile": "monai_density_299",
+      "input": {
+        "size": [299, 299],
+        "channels": 3,
+        "crop": "resize",
+        "mean": [0.0, 0.0, 0.0],
+        "std": [1.0, 1.0, 1.0]
+      },
+      "cam": {
+        "method": "gradcam",
+        "target_layer": "Mixed_7c",
+        "reshape": null
+      },
+      "licence": {
+        "spdx": "Apache-2.0",
+        "name": "MONAI Model Zoo — breast density classification",
+        "url": "https://github.com/Project-MONAI/model-zoo",
+        "access_date": "2026-11-10"
+      },
+      "source": {
+        "repo": "https://huggingface.co/MONAI/breast_density_classification",
+        "weights_url": "https://huggingface.co/MONAI/breast_density_classification/resolve/main/models/model.pt",
+        "local_path": "monai_density_model.pt",
+        "sha256": "710a49172243ea9972bec5dc717382c294ed77310596b6ad0df9bb83f7ceafce"
+      },
+      "metrics": [],
+      "approval": {
+        "benchmark_path": "ml/benchmark/monai_density_benchmark.json"
+      }
+    },
+    {
+      "model_id": "siglip_bone",
+      "version": "0.1",
+      "weights": "huggingface:google/siglip2-base-patch16-224",
+      "digest": "612923381c76ec5a9bed335d1c48827e3f2e506ac31b044b63b2031fadee6a0b",
+      "state": "candidate",
+      "task": "zero_shot_bone_classification",
+      "modalities": ["xray"],
+      "regions": ["bone_limb", "bone_hip_pelvis"],
+      "capabilities": ["bone_limb", "bone_hip_pelvis"],
+      "degraded_capabilities": ["bone_hip_pelvis"],
+      "demo": false,
+      "validated_locally": false,
+      "preprocess_profile": "siglip_bone_224",
+      "input": {
+        "size": [224, 224],
+        "channels": 3,
+        "crop": "resize",
+        "mean": [0.5, 0.5, 0.5],
+        "std": [0.5, 0.5, 0.5]
+      },
+      "cam": {
+        "method": "hirescam_logit_difference",
+        "target_layer": "vision_model.encoder.layers[-2].layer_norm1",
+        "reshape": "tokens"
+      },
+      "licence": {
+        "spdx": "Apache-2.0",
+        "name": "SigLIP 2 (Google)",
+        "url": "https://huggingface.co/google/siglip2-base-patch16-224",
+        "access_date": "2026-11-10"
+      },
+      "source": {
+        "repo": "https://huggingface.co/google/siglip2-base-patch16-224",
+        "weights_url": "https://huggingface.co/google/siglip2-base-patch16-224",
+        "local_path": "siglip2-base-patch16-224",
+        "sha256": "612923381c76ec5a9bed335d1c48827e3f2e506ac31b044b63b2031fadee6a0b",
+        "files": [
+          {
+            "path": "config.json",
+            "bytes": 253,
+            "sha256": "fe8b5fe6d5734360678fd71c11c21e1ea3364bd8598d34295d9206335973ffd7"
+          },
+          {
+            "path": "preprocessor_config.json",
+            "bytes": 394,
+            "sha256": "9b36b57ebaf20f09bf4c22100ccc21877ea6bfe5aead0c00c59f8af8ccefacfc"
+          },
+          {
+            "path": "model.safetensors",
+            "bytes": 1500800904,
+            "sha256": "612923381c76ec5a9bed335d1c48827e3f2e506ac31b044b63b2031fadee6a0b"
+          },
+          {
+            "path": "tokenizer.json",
+            "bytes": 34363039,
+            "sha256": "cb9140fae3ac5122c972d37adf83e1248471a38147ad76f8215c8872c6fd8322"
+          },
+          {
+            "path": "tokenizer_config.json",
+            "bytes": 47164,
+            "sha256": "14afe629fe4959b9e0d51e1852b8d9f7ad074f90a1a7125a4fcdd17f06e78fc8"
+          },
+          {
+            "path": "special_tokens_map.json",
+            "bytes": 636,
+            "sha256": "baec30ea10906f16adb8c18af7a34023002c1746542612b8b41c9f09e1351351"
+          },
+          {
+            "path": "tokenizer.model",
+            "bytes": 4241003,
+            "sha256": "61a7b147390c64585d6c3543dd6fc636906c9af3865a5548f27f31aee1d4c8e2"
+          }
+        ]
+      },
+      "metrics": [],
+      "approval": {
+        "benchmark_path": "ml/benchmark/siglip_bone_benchmark.json"
+      }
+    },
+    {
+      "model_id": "mammoscreen",
+      "version": "vendor",
+      "weights": "therapixel:mammoscreen",
+      "digest": "pending",
+      "state": "candidate",
+      "task": "breast_cancer_screening",
+      "modalities": ["mammogram"],
+      "regions": ["breast"],
+      "capabilities": ["mammogram_cancer"],
+      "degraded_capabilities": [],
+      "demo": false,
+      "validated_locally": false,
+      "preprocess_profile": "mammoscreen_vendor",
+      "input": {
+        "size": null,
+        "channels": null,
+        "crop": "vendor",
+        "mean": null,
+        "std": null
+      },
+      "cam": {
+        "method": "vendor",
+        "target_layer": null,
+        "reshape": null
+      },
+      "licence": {
+        "spdx": "LicenseRef-Proprietary",
+        "name": "Therapixel MammoScreen (commercial)",
+        "url": "https://www.therapixel.com/",
+        "access_date": "2026-11-10"
+      },
+      "source": {
+        "repo": null,
+        "weights_url": null,
+        "sha256": null
+      },
+      "metrics": [],
+      "approval": {
+        "benchmark_path": null
       }
     }
   ]

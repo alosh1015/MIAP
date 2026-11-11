@@ -13,7 +13,16 @@ def test_models_list_includes_cards(client, auth):
     assert chest["digest"] and chest["digest"] != "pending"
     assert chest["card"]["limitations"]
     assert chest["demo"] is False
-    assert models["stub_classifier"]["demo"] is True
+    assert "stub_classifier" not in models
+
+
+def test_internal_router_models_are_not_listed(client, auth):
+    listed = client.get(f"{API}/models", headers=auth("administrator")).json()
+    assert all(model["model_id"] != "stub_classifier" for model in listed)
+    assert client.get(f"{API}/models/stub_classifier", headers=auth("administrator")).status_code == 404
+
+    health = client.get(f"{API}/system/health", headers=auth("administrator")).json()
+    assert all(entry["model_id"] != "stub_classifier" for entry in health["models"]["versions"])
 
 
 def test_model_detail_lists_versions(client, auth):

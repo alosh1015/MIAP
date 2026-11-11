@@ -3,10 +3,11 @@
 Multimodal Image Analysis Pipeline — decision-support prototype for chest X-ray and mammogram images.
 
 This repository is the build for Specific Objective 3, Phase 1 (MVP), as specified in
-[`MIAP_MVP_Pipeline.md`](MIAP_MVP_Pipeline.md). The cycle covers chest X-ray end to end:
+[`MIAP_MVP_Pipeline.md`](MIAP_MVP_Pipeline.md). The cycle covers three image paths end to end:
 hardware benchmark, ingestion with de-identification, modality/region routing, a
-Cornerstone3D viewer, chest inference with Grad-CAM, PDF reports, a model library and audit
-export. Mammography is supported for four-view grouping and viewing, not analysis.
+Cornerstone3D viewer, chest inference with Grad-CAM, breast-density scoring per mammogram
+view, zero-shot limb X-ray scoring, PDF reports, a model library with governance approvals
+and audit export.
 
 MIAP is **decision support only**. It does not diagnose, and no output should be read as a
 diagnosis.
@@ -22,9 +23,15 @@ diagnosis.
 ```bash
 python -m venv .venv
 .venv/Scripts/python -m pip install --no-cache-dir torch torchvision --index-url https://download.pytorch.org/whl/cpu
+.venv/Scripts/python -m pip install --no-cache-dir torchxrayvision grad-cam transformers safetensors huggingface_hub
 .venv/Scripts/python -m pip install --no-cache-dir -r backend/requirements.txt -r backend/requirements-dev.txt
 cd frontend && npm ci
 ```
+
+Weights are not committed. `python scripts/fetch_models.py --check` verifies an
+installed host offline; without `--check` it downloads the missing MONAI and
+SigLIP files, checks every SHA-256 and writes `ml/weights/manifest.json`. The
+chest model is downloaded once by `torchxrayvision` into its own cache.
 
 ## Develop
 
@@ -38,6 +45,10 @@ scripts/dev.ps1          # backend on :8000, frontend on :5173
 python scripts/make_fixtures.py
 cd backend && ../.venv/Scripts/python -m pytest -q
 python ml/benchmark/bench_infer.py
+python scripts/fetch_models.py --check
+python scripts/verify_models.py
+python ml/benchmark/bench_model.py --model monai_density   # latency and CAM gate
+python ml/benchmark/bench_model.py --model siglip_bone
 python scripts/verify_audit.py path/to/audit.ndjson   # exported through the admin UI
 ```
 
@@ -51,10 +62,18 @@ scripts/dev.ps1
 The demo is fully offline. Open `http://localhost:5173`, sign in as the clinician,
 create a case, upload a chest DICOM (or a PNG), run the analysis, inspect the
 heatmap, download the PDF report, then sign in as the administrator to verify and
-export the audit chain. Weights for the chest model are downloaded once by
-`torchxrayvision` during setup and cached locally, so the demo itself needs no
-network. Without cached weights the explicitly-labelled stub engine is used.
-Every result states it is decision support, not a diagnosis.
+export the audit chain. A four-view mammogram study can be analysed per view for
+breast density, and a limb X-ray with the zero-shot bone model; both are decision
+support only and are not cancer or fracture screens. Weights for the chest model
+are downloaded once by `torchxrayvision` during setup and cached locally, so the
+demo itself needs no network; `scripts/fetch_models.py` installs and verifies the
+MONAI and SigLIP files. Without cached weights the explicitly-labelled stub
+engine is used. Every result states it is decision support, not a diagnosis.
+
+New models start as `candidate`. An administrator approves a model only after
+`ml/benchmark/bench_model.py` writes a passing benchmark; the approval stores the
+benchmark digest and survives re-seeding. `scripts/verify_models.py` re-checks
+weights, cards and benchmark evidence.
 
 ## Documentation
 

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import os
+import base64
 import shutil
 import tempfile
 import uuid
@@ -16,6 +17,9 @@ os.environ["MIAP_SECRET_KEY"] = "test-secret-key-not-for-production"
 os.environ["MIAP_MODEL_BACKEND"] = "stub"
 os.environ["MIAP_UPLOAD_MAX_BYTES"] = str(2 * 1024 * 1024)
 os.environ["MIAP_REGISTRY_PATH"] = str(Path(__file__).resolve().parents[2] / "ml" / "registry.json")
+os.environ["MIAP_PII_KEY"] = base64.b64encode(bytes(range(32))).decode()
+os.environ["MIAP_PII_INDEX_KEY"] = base64.b64encode(bytes(range(32, 64))).decode()
+os.environ["MIAP_PII_KEY_VERSION"] = "1"
 
 from fastapi.testclient import TestClient  # noqa: E402
 

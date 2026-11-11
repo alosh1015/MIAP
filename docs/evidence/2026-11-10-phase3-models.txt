@@ -1,0 +1,81 @@
+MIAP — Phase 3.4 model gate evidence
+Date: 2026-11-10
+Host: Windows 11 (10.0.26200), Intel64 Family 6 Model 140, CPU-only, Python 3.13.1
+
+Commands run from the repository root with .venv active.
+
+1. Weight install and verification
+----------------------------------
+python scripts/fetch_models.py --offline
+  chest_densenet121  managed (torchxrayvision cache)
+  stub_classifier    managed (internal)
+  monai_density      ok   sha256 710a4917…  (100,826,617 bytes)
+  siglip_bone        ok   7 files, model.safetensors sha256 61292338…  (1,500,800,904 bytes)
+  mammoscreen        managed (vendor; not distributable)
+  manifest: ml/weights/manifest.json
+
+python scripts/verify_models.py
+  chest_densenet121  OK
+  stub_classifier    OK
+  monai_density      OK   benchmark passed
+  siglip_bone        OK   benchmark passed
+  mammoscreen        OK   (no weights, no benchmark)
+  all model checks passed
+
+2. Benchmarks
+-------------
+python ml/benchmark/bench_model.py --model monai_density --runs 5
+  mean 0.109 s; first result 2.652 s; p95 0.112 s; peak RSS 465.4 MB
+  CAM 299x299, finite, min 0 / max 1, std 0.153
+  checks: digest, latency (<=6 s), result (<=6 s), CAM shape/range/signal all true
+  output: ml/benchmark/monai_density_benchmark.json
+  benchmark_digest cffedc26ba4fd8634c963e9bbddaf979a43833ae435894f4f2c7eb86963e09a5
+
+python ml/benchmark/bench_model.py --model siglip_bone --runs 3
+  mean 0.331 s; first result 3.429 s; p95 0.337 s; peak RSS 2081.6 MB
+  CAM 224x224, finite, min 0 / max 1, std 0.211
+  prediction on hand fixture: normal 0.638 / abnormal 0.362
+  output: ml/benchmark/siglip_bone_benchmark.json
+  benchmark_digest 390bcb5c003fb9ecd5cfac78c5b85b7508d1cef89d6e323f116e12762e04196b
+
+python ml/benchmark/bench_model.py --model mammoscreen --allow-unavailable \
+    --fixture backend/tests/fixtures/generated/mammo_four_view/LCC.dcm
+  refused: model_not_approved — commercial weights, remote code and no local benchmark
+  output: ml/benchmark/mammoscreen_benchmark.json (selectable: false)
+
+3. Approval decisions (live database, administrator account)
+------------------------------------------------------------
+POST /models/monai_density/0.1/approve
+  state approved; benchmark_digest cffedc26ba4f…
+  note: CPU benchmark passed on 2026-11-10; decision support only; not clinically
+        validated on local patients.
+POST /models/siglip_bone/0.1/approve
+  state approved; benchmark_digest 390bcb5c003f…
+GET /models now reports mammoscreen candidate and the other four approved.
+Model library after approval: docs/evidence/phase3-models-approved-1440.png.
+
+Note: approvals are deployment decisions in model_approvals/model_versions. A
+fresh database seeds the registry states, so the same two models return as
+candidate until an administrator approves them again.
+
+4. End-to-end UI check (clinician, 1440 px)
+-------------------------------------------
+Four-view mammogram study MAMMO-UI-TEST uploaded through the UI. Before approval
+the breast-density panel showed "0 of 4 views scored", pending chips and a
+disabled "Analyse exam" with a candidate notice
+(docs/evidence/phase3-mammogram-exam-summary-1440.png).
+
+After approval, "Analyse exam" queued four per-view MONAI jobs through the real
+worker. GET /cases/{id}/exam-summary returned 4 of 4 views scored; left and right
+breast both B ("scattered dense tissue") from LCC+LMLO and RCC+RMLO. The
+workspace showed the density panel, plain-language findings with bands and
+confirm/dismiss controls, and an approved-model trust strip
+(docs/evidence/phase3-mammogram-exam-scored-1440.png). The caveat "not calibrated
+on local patients, not a cancer screen" is visible in both states.
+
+5. Automated checks
+-------------------
+cd backend && ../.venv/Scripts/python.exe -m pytest -q  -> 267 passed
+cd frontend && npm run typecheck -> clean
+python scripts/verify_audit.py --from-api http://127.0.0.1:8000 --token <admin>
+  OK: 345 events, chain intact after the approvals and exam runs

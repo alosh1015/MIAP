@@ -84,6 +84,25 @@ def test_mammogram_exams_group_into_four_views(
         assert layout["bottom_right"] is None
 
 
+def test_limb_xray_reports_the_bone_capability(client, auth, new_case, upload):
+    case_id = new_case()
+    assert upload(case_id, FIXTURES / "hand_pa.dcm").status_code == 201
+
+    body = client.get(f"{API}/cases/{case_id}", headers=auth("clinician")).json()
+    regions = {entry["region"]: entry for entry in body["exam"]["regions"]}
+    assert regions["bone_limb"]["capability"]["bucket"] == "bone_limb"
+    assert regions["bone_limb"]["capability"]["supported"] is True
+
+
+def test_mammogram_upload_reports_density_capability(client, auth, new_case, upload):
+    case_id = new_case()
+    response = upload(case_id, FIXTURES / "mammo_four_view" / "LCC.dcm")
+    assert response.status_code == 201, response.text
+    capability = response.json()["image"]["validation"]["capability"]
+    assert capability["bucket"] == "mammogram_density"
+    assert capability["supported"] is True
+
+
 def test_archive_case_sets_status(client, auth, new_case):
     case_id = new_case()
     response = client.delete(f"{API}/cases/{case_id}", headers=auth("clinician"))

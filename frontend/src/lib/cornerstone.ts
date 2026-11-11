@@ -6,7 +6,7 @@ export const TOOL_GROUP_ID = "miap-viewer-tools";
 export const ENGINE_ID = "miap-rendering-engine";
 const SCHEME = "miap";
 
-export type ViewerTool = "WindowLevel" | "Pan" | "Zoom" | "Length";
+export type ViewerMode = "navigate" | "measure" | "lasso";
 
 let ready: Promise<void> | null = null;
 let synchronizer: cornerstoneTools.Synchronizer | null = null;
@@ -26,12 +26,12 @@ export function releaseEngine(): void {
   }
 }
 
-const TOOL_NAMES: Record<ViewerTool, string> = {
+const TOOL_NAMES = {
   WindowLevel: cornerstoneTools.WindowLevelTool.toolName,
   Pan: cornerstoneTools.PanTool.toolName,
   Zoom: cornerstoneTools.ZoomTool.toolName,
   Length: cornerstoneTools.LengthTool.toolName,
-};
+} as const;
 
 function typedArray(dtype: PixelMeta["dtype"], buffer: ArrayBuffer): ArrayBufferView {
   switch (dtype) {
@@ -203,7 +203,6 @@ export function initCornerstone(): Promise<void> {
         cornerstoneTools.PanTool,
         cornerstoneTools.ZoomTool,
         cornerstoneTools.LengthTool,
-        cornerstoneTools.StackScrollTool,
       ]) {
         cornerstoneTools.addTool(tool);
       }
@@ -221,21 +220,15 @@ export function toolGroup(): cornerstoneTools.Types.IToolGroup | undefined {
   );
 }
 
-export function attachViewport(viewportId: string, engineId: string): void {
+export function attachViewport(viewportId: string, engineId: string, mode: ViewerMode = "navigate"): void {
   const group = toolGroup();
   if (!group) return;
   for (const name of Object.values(TOOL_NAMES)) {
     if (!group.hasTool(name)) group.addTool(name);
   }
-  if (!group.hasTool(cornerstoneTools.StackScrollTool.toolName)) {
-    group.addTool(cornerstoneTools.StackScrollTool.toolName);
-    group.setToolActive(cornerstoneTools.StackScrollTool.toolName, {
-      bindings: [{ mouseButton: cornerstoneTools.Enums.MouseBindings.Wheel }],
-    });
-  }
   group.addViewport(viewportId, engineId);
   synchronizer?.add({ renderingEngineId: engineId, viewportId });
-  activateTool("WindowLevel", group);
+  activateViewerTools(mode, group);
 }
 
 export function detachViewport(viewportId: string, engineId: string): void {
@@ -244,17 +237,36 @@ export function detachViewport(viewportId: string, engineId: string): void {
   synchronizer?.remove({ renderingEngineId: engineId, viewportId });
 }
 
-export function activateTool(tool: ViewerTool, group = toolGroup()): void {
-  if (!group) return;
-  for (const [name, toolName] of Object.entries(TOOL_NAMES)) {
-    if (name === tool) {
-      group.setToolActive(toolName, { bindings: [{ mouseButton: cornerstoneTools.Enums.MouseBindings.Primary }] });
-    } else {
-      group.setToolPassive(toolName);
-    }
-  }
-}
+const { MouseBindings, KeyboardBindings } = cornerstoneTools.Enums;
 
-export function resetSynchronizer(): void {
-  synchronizer?.setEnabled(true);
+/**
+ * Navigation is implicit: wheel zooms, primary drag pans, secondary drag
+ * windows. Touch: one finger pans, two fingers pinch-zoom. Measurement is an
+ * explicit tool mode; lasso is drawn by the viewer over the viewport and takes
+ * the pointer while active.
+ */
+export function activateViewerTools(mode: ViewerMode, group = toolGroup()): void {
+  if (!group) return;
+  group.setToolActive(TOOL_NAMES.Zoom, {
+    bindings: [{ mouseButton: MouseBindings.Wheel }, { numTouchPoints: 2 }],
+  });
+  group.setToolActive(TOOL_NAMES.WindowLevel, {
+    bindings: [{ mouseButton: MouseBindings.Secondary }],
+  });
+  if (mode === "measure") {
+    group.setToolActive(TOOL_NAMES.Length, {
+      bindings: [{ mouseButton: MouseBindings.Primary }],
+    });
+    group.setToolActive(TOOL_NAMES.Pan, {
+      bindings: [
+        { mouseButton: MouseBindings.Primary, modifierKey: KeyboardBindings.Shift },
+        { mouseButton: MouseBindings.Auxiliary },
+      ],
+    });
+  } else {
+    group.setToolPassive(TOOL_NAMES.Length);
+    group.setToolActive(TOOL_NAMES.Pan, {
+      bindings: [{ mouseButton: MouseBindings.Primary }, { numTouchPoints: 1 }],
+    });
+  }
 }

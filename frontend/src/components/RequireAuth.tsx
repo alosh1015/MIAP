@@ -2,12 +2,14 @@ import type { ReactNode } from "react";
 import { Navigate, Outlet } from "react-router-dom";
 import { useAuth, hasRole } from "../auth/AuthContext";
 import type { Role } from "../api/client";
+import { EmptyState, Panel } from "./ui";
+import { Icon } from "./icons";
 
 export function RequireAuth() {
   const { user, loading } = useAuth();
   if (loading) {
     return (
-      <div className="flex min-h-screen items-center justify-center text-sm text-slate-500">
+      <div className="flex min-h-screen items-center justify-center text-sm text-muted">
         Restoring session…
       </div>
     );
@@ -20,12 +22,16 @@ export function RequireRole({ roles, children }: { roles: Role[]; children: Reac
   const { user } = useAuth();
   if (!hasRole(user, ...roles)) {
     return (
-      <div className="rounded-xl border border-slate-200 bg-white p-8">
-        <h1 className="text-lg font-semibold">Not available for this role</h1>
-        <p className="mt-2 max-w-prose text-sm text-slate-600">
-          This area is restricted. Your administrator can change your role if you need access.
+      <Panel>
+        <EmptyState
+          icon="lock"
+          title="Not available for this role"
+        />
+        <p className="flex items-center justify-center gap-1.5 border-t border-rule px-6 py-3 text-xs text-muted">
+          <Icon name="shield" size={14} />
+          Enforced by the server as well as this screen.
         </p>
-      </div>
+      </Panel>
     );
   }
   return <>{children}</>;

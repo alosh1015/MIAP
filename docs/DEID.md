@@ -9,6 +9,31 @@ in the case workspace so a reviewer can see what happened to the file.
 Pipeline version: `ps3.15-basic-subset/1.0` for DICOM,
 `exif-strip-raster/1.0` for PNG/JPEG.
 
+## Relationship to patient identity
+
+De-identification and patient identity are separate mechanisms and must not be
+conflated:
+
+- This document covers what is removed **from the image**. It is unchanged by
+  the identity feature: the original bytes are still discarded, the UID
+  remapping key is still not retained, and no pixel or header value is used to
+  reconstruct a patient.
+- Clinical identity (name, hospital number, sex, date of birth) may be attached
+  to a **case** as an out-of-band record, encrypted with AES-256-GCM and visible
+  only to the clinician who owns the case. Researchers and administrators see
+  only the pseudonym.
+- The link is entered by the clinician (new-patient form or "link existing
+  patient"). It is never derived from stored images, and deleting the patient
+  record leaves no image→person path.
+- Health data is **special personal data** under Uganda's Data Protection and
+  Privacy Act, 2019. The identity layer requires a documented lawful basis,
+  access controls (implemented: owner-only RBAC plus audit-before-read) and a
+  retention decision. Until the ethics and data-protection review is complete,
+  use synthetic or demonstration patients only.
+- Reports enforce the same boundary: clinician reports include identity and
+  review notes, researcher reports are pseudonymised and withhold notes, and
+  governance reports exclude patients, pixels and findings.
+
 ## DICOM
 
 The implementation follows the DICOM PS3.15 Annex E *Basic Application Level

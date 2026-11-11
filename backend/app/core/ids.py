@@ -13,6 +13,12 @@ PREFIXES = {
     "report": "rp",
     "audit": "a",
     "user": "u",
+    "patient": "pt",
+    "review": "rv",
+    "heatmap": "hm",
+    "batch": "b",
+    "approval": "ma",
+    "annot": "an",
 }
 
 

@@ -12,10 +12,12 @@ from app.core.config import get_settings
 from app.core import db
 from app.core.errors import AppError
 from app.core.ids import utcnow_iso
-from app.core.schema import Case, Image, Job
+from app.core.schema import AnalysisBatch, Case, Image, Job
 from app.core.storage import read_blob
 from app.modules.inference.engine import get_engine
+from app.modules.preprocessing.profiles import heatmap_mapping
 from app.modules.preprocessing.service import load_pixels, to_model_input
+from app.modules.results.presenter import band_for, is_flagged
 from app.modules.results.schemas import (
     ConfidenceSource,
     Finding,
@@ -23,7 +25,7 @@ from app.modules.results.schemas import (
     ResultDocument,
 )
 from app.modules.results.service import create_result
-from app.modules.routing.service import capability_for
+from app.modules.routing.service import is_degraded, resolve_model_for_image
 
 
 def _progress(session, job: Job, value: float) -> None:
@@ -45,6 +47,30 @@ def _fail(session, job: Job, code: str, detail: str) -> None:
         resource_id=job.id,
         detail={"code": code},
     )
+    session.commit()
+
+
+def _refresh_batch(session, job: Job) -> None:
+    """Roll per-job outcomes up to the batch after each terminal state."""
+    if not job.batch_id:
+        return
+    batch = session.get(AnalysisBatch, job.batch_id)
+    if batch is None:
+        return
+    jobs = session.execute(select(Job).where(Job.batch_id == batch.id)).scalars().all()
+    batch.completed = sum(1 for item in jobs if item.state == "completed")
+    batch.failed = sum(1 for item in jobs if item.state == "failed")
+    batch.updated_at = utcnow_iso()
+    finished = batch.completed + batch.failed
+    if finished >= batch.total and batch.total > 0:
+        if batch.failed == 0:
+            batch.state = "completed"
+        elif batch.completed == 0:
+            batch.state = "failed"
+        else:
+            batch.state = "partial"
+    elif finished > 0:
+        batch.state = "running"
     session.commit()
 
 
@@ -76,34 +102,47 @@ def run_job(job_id: str) -> None:
         if image is None or case is None:
             raise AppError(422, "job_input_missing", "Job input image or case no longer exists")
 
-        if image.modality != "xray":
-            raise AppError(
-                409,
-                "analysis_not_supported",
-                "Analysis is not available for this modality",
-                "Mammogram AI analysis is out of scope for this MVP cycle; four-view viewing is supported.",
-            )
-        capability = capability_for(image.body_part or "unrecognised")
-        if not capability["supported"]:
-            raise AppError(
-                409,
-                "analysis_not_supported",
-                "Analysis is not available for this body region",
-                f"Region: {image.body_part}. Supported in this cycle: chest X-ray.",
-            )
+        entry, bucket = resolve_model_for_image(session, image, job.model_id, job.model_version)
+        degraded = is_degraded(entry, bucket)
 
         data = read_blob(image.blob_digest)
         array, meta = load_pixels(image.mime, data)
         _progress(session, job, 0.25)
 
-        model_input, input_stats = to_model_input(array, photometric=meta.get("photometric", ""))
+        profile = entry.get("preprocess_profile") or "xrv_chest_224"
+        model_input, input_stats = to_model_input(
+            array, photometric=meta.get("photometric", ""), profile=profile
+        )
         _progress(session, job, 0.4)
 
-        engine = get_engine(job.model_id or "chest_densenet121")
+        engine = get_engine(entry["model_id"], entry["version"])
         prediction = engine.predict(model_input)
         _progress(session, job, 0.7)
 
-        cam = engine.gradcam(model_input, target_index=prediction.extra.get("top_index"))
+        top_index = int(prediction.extra.get("top_index") or 0)
+        # A normal/reference class has no region to point at, and nothing is
+        # highlighted when the leading finding did not reach the review band.
+        flagged = is_flagged(
+            {
+                "label": prediction.label,
+                "band": band_for(prediction.probability, 0.5),
+            }
+        )
+        cam = (
+            engine.gradcam(model_input, target_index=top_index)
+            if flagged and engine.localisable(prediction.label)
+            else None
+        )
+        mapping = heatmap_mapping(profile)
+        # top_index addresses the model's class list; stores index into `findings`.
+        primary_index = next(
+            (
+                position
+                for position, finding in enumerate(prediction.findings)
+                if finding["label"] == prediction.label
+            ),
+            0,
+        )
         _progress(session, job, 0.85)
 
         validation = json.loads(image.validation_json or "{}")
@@ -121,6 +160,18 @@ def run_job(job_id: str) -> None:
         ]
         if engine.demo:
             warnings.append("Demo model: this output carries no clinical meaning.")
+        if bucket == "mammogram_density":
+            warnings.append(
+                "Breast density is a qualitative BI-RADS-style category, not a cancer screen."
+            )
+        if bucket == "bone_limb":
+            warnings.append(
+                "This bone model is zero-shot and has not been validated on local patients."
+            )
+        if bucket == "bone_hip_pelvis":
+            warnings.append(
+                "Experimental capability: hip and pelvis radiographs are outside the model's validated scope."
+            )
         warnings.extend(validation.get("warnings", []))
 
         document = ResultDocument(
@@ -136,18 +187,42 @@ def run_job(job_id: str) -> None:
             ),
             classification={"label": prediction.label, "probability": prediction.probability},
             findings=[Finding(**finding) for finding in prediction.findings],
+            primary_finding_index=primary_index,
             detections=[],
             segmentation=None,
             heatmap=None,
             birads=None,
-            density=None,
+            density=prediction.extra.get("density"),
             warnings=warnings,
             provenance_id="pending",
-            degraded=False,
+            degraded=degraded,
             created_at=utcnow_iso(),
         )
 
-        create_result(session, job=job, image=image, document=document, cam=cam)
+        parameters = {
+            "profile": profile,
+            "input_size": int(input_stats["size"]),
+            "channels": int(input_stats["channels"]),
+            "normalisation": profile,
+            "threshold": 0.5,
+            "gradcam_layer": engine.cam_layer,
+            "cam_method": engine.cam_method,
+            "capability": bucket,
+            "heatmap_mapping": mapping,
+        }
+        prompts = prediction.extra.get("prompts")
+        if prompts:
+            parameters["prompts"] = prompts
+        create_result(
+            session,
+            job=job,
+            image=image,
+            document=document,
+            cam=cam,
+            primary_index=primary_index,
+            parameters=parameters,
+            heatmap_mapping=mapping,
+        )
 
         job.state = "completed"
         job.progress = 1.0
@@ -160,7 +235,11 @@ def run_job(job_id: str) -> None:
             action="job.completed",
             resource_type="job",
             resource_id=job.id,
-            detail={"model": document.model.model_dump(), "input_stats": input_stats},
+            detail={
+                "model": document.model.model_dump(),
+                "capability": bucket,
+                "input_stats": input_stats,
+            },
         )
         session.commit()
     except AppError as exc:
@@ -175,6 +254,12 @@ def run_job(job_id: str) -> None:
         if job is not None:
             _fail(session, job, "analysis_failed", f"{type(exc).__name__}: {exc}")
     finally:
+        try:
+            current = session.get(Job, job_id)
+            if current is not None:
+                _refresh_batch(session, current)
+        except Exception:  # noqa: BLE001 - batch rollup must not kill the worker
+            session.rollback()
         session.close()
 
 

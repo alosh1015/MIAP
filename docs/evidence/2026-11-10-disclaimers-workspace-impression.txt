@@ -1,0 +1,70 @@
+Consolidated disclaimers, decluttered workspace, and model impression
+Date: 2026-11-10 (Africa/Kampala)
+
+Scope
+- One safety notice per screen, rendered at the bottom by a shared
+  `ScreenWarning` component. Duplicate inline disclaimers were removed from the
+  dashboard, new-study, new-patient, patient banner and study workspace.
+  Statements are de-duplicated by exact text and combined into a single list.
+- Critical or functional notices stay inline: administrator no-pixel access,
+  result-view mismatch, demo/degraded model, unavailable candidate model, and
+  the encrypted review-note notice.
+- Study workspace decluttered: the trust strip, viewer caption, duplicate
+  de-identification notice and separate add-images expander were removed. The
+  viewer and image summary form the sticky centre column at >=1280 px
+  (`xl:sticky xl:top-[72px] xl:self-start`), with findings/review on the right.
+- Image upload moved into a dialog opened from the compact `Images` button.
+- Review is inline: Confirm/Dismiss and an optional note expand in the finding
+  row. No modal opens for review; the API call is the existing
+  `POST /results/{result_id}/findings/{index}/review`.
+- Server-computed `impression` added to the v2 result presentation and shared by
+  the UI, clinician PDF and researcher PDF:
+  `{kind, label, plain_label, band, band_label, probability, text}`.
+  `kind` is `finding`, `density` or `none`. A borderline leader uses
+  "Possible pattern: ..." and states that the signal is weak; an empty review
+  band returns the fixed no-finding sentence.
+- PDFs gain an "Impression" (clinician) or "Model impression" (researcher)
+  paragraph. The impression text avoids the em dash because Helvetica PDF
+  extraction showed it as an unmapped glyph.
+
+Commands and results
+- `cd backend && ../.venv/Scripts/python.exe -m pytest -q`
+  -> 271 passed in 42.39 s. Includes the new impression tests:
+  leading condition, borderline/absence, and breast density category.
+- `cd frontend && npm run typecheck`
+  -> clean (tsc --noEmit).
+- Live API (`GET /api/v1/analyses/{job_id}/result`) on result
+  `j_335a737a` / case MIAP-0DDB8866:
+  `document_version: 2`;
+  `impression.kind = "finding"`;
+  `text = "Most likely pattern: Lung Opacity (a cloudy patch in the lung).
+  Worth reviewing."`;
+  leading finding band `above_threshold` at 0.6794.
+- Clinician PDF contains an `Impression` heading followed by that text
+  (verified by pypdf extraction).
+
+UI checks (in-app browser, DOM inspection; screenshots unavailable because the
+in-app browser had no visible surface this session)
+- Study workspace (clinician, case with a result): grid class
+  `xl:grid-cols-[260px_minmax(0,1fr)_380px]`; findings drawer shows
+  `IMPRESSION` with the expected sentence, `1 of 8 reviewed`, 7 findings each
+  with inline Confirm/Dismiss and "Add note"; `dialogs: 0` while reviewing.
+- Workspace safety notice contains one combined block: decision support /
+  uncalibrated scores, TB non-screening, overlay meaning, de-identification, and
+  the case's non-generic DICOM fallback warning.
+- New study page: exactly one `section[aria-label="Safety notice"]` with
+  decision support, TB non-screening and de-identification lines.
+- New patient page: exactly one safety notice with the encryption/audit line and
+  the ethics/data-protection line.
+- Administrator workspace: two-column grid, metadata-only findings count, no
+  safety notice (no pixels or clinical content), role notice still visible.
+
+Not claimed
+- No screenshot evidence for this pass; checks are DOM/API/PDF text.
+- Desktop layout (sticky column at >=1280 px) was verified structurally by class
+  and DOM order, not visually; the in-app viewport was 504x425.
+- Researcher visual check was not possible in this session because no
+  research-consent case with a completed result was available; the researcher
+  PDF and the server-side role filters are covered by tests.
+- No server rule changed: RBAC, de-identification, audit ordering and
+  administrator image denial remain enforced and tested by the backend suite.

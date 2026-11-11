@@ -1,0 +1,55 @@
+Copy pass, first-run tour and internal model visibility
+Date: 2026-11-10 (Africa/Kampala)
+
+Scope
+- Removed instructional and explanatory copy across the clinician, researcher
+  and administrator screens. Retained clinical and security statements: TB
+  non-screening, uncalibrated scores, administrator no-pixel access, image
+  de-identification and no retained re-identification key.
+- Added a role-aware first-run tour (Dashboard, Worklist/Dataset, New study,
+  Study workspace, Models or governance screens) with Back, Next, Done, Skip
+  and a close button. Reopenable from Settings > Take the tour.
+  State: localStorage `miap.tour.v1:<user id>`.
+- Registry entries can declare `presentation: "internal"`. The deterministic
+  routing/fallback classifier `stub_classifier` is marked internal and is
+  omitted from `/models`, `/models/{id}`, `/system/health` and dashboard model
+  counts. It stays seeded and usable by inference, routing and approval
+  endpoints.
+- The viewer help dialog and `?` shortcut were removed; viewer interaction
+  guidance now lives in the tour. The floating control bar and its accessible
+  labels are unchanged.
+
+Commands and results
+- `cd backend && ../.venv/Scripts/python.exe -m pytest -q`
+  -> 268 passed in 52.15 s (includes new
+  `test_internal_router_models_are_not_listed`).
+- `cd frontend && npm run typecheck`
+  -> clean (tsc --noEmit).
+- Live API after restarting the local backend (it had been started without
+  --reload, so the first check still showed old code):
+  `GET /api/v1/models` -> chest_densenet121, mammoscreen, monai_density,
+  siglip_bone (no stub_classifier); `GET /api/v1/models/stub_classifier`
+  -> 404.
+
+UI checks (in-app browser, DOM inspection; screenshots unavailable because the
+in-app browser had no visible surface this session)
+- Fresh clinician session: tour opened once at "Tour · 1 of 5 Dashboard";
+  Next advanced through Worklist, New study, Study workspace and Models;
+  Done closed and wrote `miap.tour.v1:<user id> = done`; reload did not reopen.
+- Clearing the key and reloading reopened the tour; Skip closed it and wrote
+  the same key.
+- Settings > Take the tour reopened the tour at step 1.
+- Model library: no `stub_classifier` text; removed phrases ("Every model MIAP
+  can route", "Clear the filter", "traced back to the exact weights",
+  "Start a study with this model available") are absent.
+- Study workspace: "Scroll to zoom", "Viewer help", "Results appear here",
+  "provenance, scores and pixels" and the report description are absent.
+- Console: no application errors; the only 404s were two deliberate direct
+  fetch probes for `/api/models` and `/api/models/stub_classifier`.
+
+Not claimed
+- No visual screenshot evidence for this pass. The checks above are structural
+  (DOM text and localStorage) plus API responses.
+- Removing directions from the UI does not change any server rule: RBAC,
+  de-identification, audit ordering and administrator image denial are tested
+  by the backend suite, not by copy.
