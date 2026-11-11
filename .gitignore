@@ -44,3 +44,6 @@ backend/tests/fixtures/generated/
 
 # Third-party sample images, kept local for licensing reasons
 sample_data/
+
+# Runtime logs
+*.log
